@@ -5,7 +5,7 @@ Fictional reference build. All times are local (Pacific) times for a single shif
 import argparse
 import csv
 from datetime import datetime, timedelta
-import json
+import math
 from pathlib import Path
 import sqlite3
 import sys
@@ -34,12 +34,18 @@ def hm(when):
     return when.strftime('%H:%M')
 
 
+def half_up(value):
+    """Round .5 up, the same way the browser version (Math.round) does."""
+    return math.floor(value + 0.5)
+
+
 def read_rows(path, fields):
     """Yield (line, row, error) for each CSV row; a row with a missing field gets an error."""
-    with path.open(newline='', encoding='utf-8') as file:
-        for line, row in enumerate(csv.DictReader(file), start=2):
+    with path.open(newline='', encoding='utf-8-sig') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
             missing = [name for name in fields if not (row.get(name) or '').strip()]
-            yield line, row, f'missing {", ".join(missing)}' if missing else None
+            yield reader.line_num, row, f'missing {", ".join(missing)}' if missing else None
 
 
 def load(folder):
@@ -184,11 +190,11 @@ def summarize(trips, alerts):
         'cancelled': sum(t['updates'][-1]['status'] == 'cancelled' for t in trips.values() if t['updates']),
         'no_shows': sum(t['updates'][-1]['status'] == 'no_show' for t in trips.values() if t['updates']),
         'on_time': on_time, 'late': late, 'arrival_not_recorded': unrecorded,
-        'on_time_rate': round(100 * on_time / (on_time + late)) if on_time + late else None,
-        'average_minutes_late': round(sum(minutes_late) / len(minutes_late)) if minutes_late else 0,
+        'on_time_rate': half_up(100 * on_time / (on_time + late)) if on_time + late else None,
+        'average_minutes_late': half_up(sum(minutes_late) / len(minutes_late)) if minutes_late else 0,
         'alerts': {kind: kinds.count(kind) for kind in ALERTS},
         'late_with_warning': len(warnings), 'late_without_warning': missed,
-        'average_warning_minutes': round(sum(warnings) / len(warnings)) if warnings else 0,
+        'average_warning_minutes': half_up(sum(warnings) / len(warnings)) if warnings else 0,
         'at_risk_but_on_time': false_alarms,
     }
 
@@ -196,6 +202,8 @@ def summarize(trips, alerts):
 def replay(folder):
     """Run the check every STEP minutes across the whole shift and collect what the dashboard shows."""
     trips, rejected = load(folder)
+    if not trips:
+        raise ValueError('no valid trips to replay')
     start = min(t['window_start'] - LEAD for t in trips.values()).replace(minute=0)
     end = max([u['at'] for t in trips.values() for u in t['updates']] + [t['window_end'] for t in trips.values()])
     end = (end + timedelta(hours=1)).replace(minute=0)
@@ -211,13 +219,9 @@ def replay(folder):
     db.close()
     rows = [{**{k: trip[k] for k in TRIP_FIELDS}, 'window_start': hm(trip['window_start']),
              'window_end': hm(trip['window_end']), 'changes': changes[trip_id]} for trip_id, trip in trips.items()]
-    return {'fictional': True, 'shift_date': start.strftime('%Y-%m-%d'), 'start': start.strftime(FMT),
+    return {'shift_date': start.strftime('%Y-%m-%d'), 'start': start.strftime(FMT),
             'step_minutes': int(STEP.total_seconds() // 60), 'ticks': tick, 'trips': rows, 'alerts': alerts,
             'rejected': rejected, 'summary': summarize(trips, alerts)}
-
-
-def dashboard_js(data):
-    return 'window.MONITOR_DATA = ' + json.dumps(data, indent=1, ensure_ascii=False) + ';\n'
 
 
 def main(argv=None):
@@ -227,15 +231,21 @@ def main(argv=None):
     run = commands.add_parser('check', help='record and print new alerts, as the 5-minute job would')
     run.add_argument('--at', help='check time, YYYY-MM-DD HH:MM (default: now)')
     run.add_argument('--db', type=Path, default=ROOT / 'output' / 'alerts.sqlite')
-    commands.add_parser('build', help='replay the shift and write docs/data.js for the dashboard')
+    commands.add_parser('report', help='replay the whole shift and print the end-of-shift results')
     args = parser.parse_args(argv)
     try:
-        if args.command == 'build':
+        if args.command == 'report':
             data = replay(args.files)
-            (ROOT / 'docs' / 'data.js').write_text(dashboard_js(data), encoding='utf-8', newline='\n')
-            s = data['summary']
-            print(f'Wrote docs/data.js: {s["trips"]} trips, {s["on_time_rate"]}% on time, '
-                  f'{sum(s["alerts"].values())} alerts, {len(data["rejected"])} rejected rows.')
+            s, a = data['summary'], data['summary']['alerts']
+            print(f'Shift {data["shift_date"]}: {s["trips"]} trips, {s["cancelled"]} cancelled, {s["no_shows"]} no-shows.')
+            print(f'On time: {s["on_time"]} of {s["on_time"] + s["late"]} with a recorded arrival ({s["on_time_rate"]}%). '
+                  f'Late: {s["late"]}, {s["average_minutes_late"]} min after the window on average. '
+                  f'Arrival not recorded: {s["arrival_not_recorded"]}.')
+            print(f'Alerts: {a["at_risk"]} at risk, {a["late"]} late, {a["unknown"]} no recent update. '
+                  f'Late arrivals warned ahead: {s["late_with_warning"]} of {s["late"]}, '
+                  f'{s["average_warning_minutes"]} min before the window closed on average. '
+                  f'At-risk alerts for trips that arrived on time: {s["at_risk_but_on_time"]}.')
+            print(f'Rejected rows: {len(data["rejected"])}.')
             return 0
         trips, rejected = load(args.files)
         now = parse_time(args.at) if args.at else datetime.now().replace(second=0, microsecond=0)

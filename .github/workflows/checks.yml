@@ -12,5 +12,6 @@ jobs:
         with:
           node-version: '24'
       - run: python -W error::ResourceWarning -m unittest -v
-      - run: node --check docs/app.js
+      - run: node --check docs/app.js && node --check docs/engine.js
       - run: python monitor.py check --at "2026-11-10 07:00"
+      - run: python monitor.py report

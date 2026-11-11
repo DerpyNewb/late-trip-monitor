@@ -1,9 +1,13 @@
 import csv
 from datetime import datetime
+import json
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
 
+import make_sample
 import monitor
 
 ROOT = Path(__file__).parent
@@ -97,15 +101,25 @@ class Files(unittest.TestCase):
 
 
 class Sample(unittest.TestCase):
-    def test_sample_shift_and_published_dashboard_data(self):
+    def test_sample_shift(self):
         data = monitor.replay(ROOT / 'samples')
         s = data['summary']
         self.assertEqual((s['trips'], s['on_time'], s['late'], s['arrival_not_recorded']), (32, 26, 4, 1))
         self.assertEqual(s['alerts'], {'at_risk': 5, 'late': 4, 'unknown': 3})
         self.assertEqual((s['late_with_warning'], s['late_without_warning'], s['at_risk_but_on_time']), (3, 1, 2))
         self.assertEqual(len(data['rejected']), 5)
+
+    def test_dashboard_embeds_the_current_samples(self):
         published = (ROOT / 'docs' / 'data.js').read_text(encoding='utf-8')
-        self.assertEqual(published, monitor.dashboard_js(data), 'docs/data.js is stale: run python monitor.py build')
+        self.assertEqual(published, make_sample.sample_js(ROOT / 'samples'), 'docs/data.js is stale: run python make_sample.py')
+
+    @unittest.skipUnless(shutil.which('node'), 'Node.js is needed to run the browser version')
+    def test_browser_version_matches_python(self):
+        result = subprocess.run(['node', str(ROOT / 'docs' / 'engine.js'), str(ROOT / 'samples')],
+                                capture_output=True, text=True, encoding='utf-8', check=True)
+        browser, python = json.loads(result.stdout), monitor.replay(ROOT / 'samples')
+        for key in ('start', 'ticks', 'trips', 'alerts', 'rejected', 'summary'):
+            self.assertEqual(browser[key], python[key], key)
 
 
 if __name__ == '__main__':

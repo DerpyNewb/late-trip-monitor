@@ -1,8 +1,9 @@
-"""Write the fictional sample shift to samples/trips.csv and samples/updates.csv.
+"""Write the fictional sample shift to samples/ and embed it in docs/data.js for the dashboard.
 
 Every rider, driver and zone is made up. The seed is fixed, so the files are the same on every run.
 """
 import csv
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 import random
@@ -121,5 +122,14 @@ def make(folder):
     return len(trips), len(updates)
 
 
+def sample_js(folder):
+    """The sample files as a script, so the dashboard opens them straight from disk with no server."""
+    files = {name: (folder / name).read_text(encoding='utf-8') for name in ('trips.csv', 'updates.csv')}
+    return 'window.SAMPLE_FILES = ' + json.dumps(files, indent=1) + ';\n'
+
+
 if __name__ == '__main__':
-    print('Wrote %d trips and %d updates.' % make(Path(__file__).parent / 'samples'))
+    root = Path(__file__).parent
+    print('Wrote %d trips and %d updates.' % make(root / 'samples'))
+    (root / 'docs' / 'data.js').write_text(sample_js(root / 'samples'), encoding='utf-8', newline='\n')
+    print('Wrote docs/data.js for the dashboard.')

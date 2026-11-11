@@ -4,18 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Late-trip monitor</title>
-  <meta name="description" content="Replay of a fictional medical-transport shift: driver ETAs are checked against pickup windows, and late or quiet trips are flagged to the dispatch desk that owns them.">
+  <meta name="description" content="Play the dispatcher on a fictional medical-transport shift: driver ETAs are checked against pickup windows, and late or quiet trips are flagged to the desk that owns them.">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
   <script src="data.js" defer></script>
+  <script src="engine.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#attention">Skip to trips that need attention</a>
   <header class="page-header">
-    <p class="reference">Fictional shift, <span id="shift-date">10 Nov 2026</span>. Riders, drivers and zones are made up.</p>
+    <p id="source" class="reference">Fictional shift. Riders, drivers and zones are made up.</p>
     <h1>Late-trip monitor</h1>
-    <p>Every 5 minutes, a check compares each driver's latest ETA with the rider's pickup window. Trips that will miss the window, have missed it, or have gone quiet go to the dispatch desk that owns them. Move the shift time to replay the day.</p>
+    <p>Every 5 minutes, a check compares each driver's latest ETA with the rider's pickup window. Trips that will miss the window, have missed it, or have gone quiet go to the dispatch desk that owns them.</p>
+    <ol class="steps">
+      <li>Press <strong>Play</strong>, or drag the shift time.</li>
+      <li>Under <strong>Make something go wrong</strong>, delay a driver or silence their app, then press Play to watch the check react.</li>
+      <li>Approve, edit or discard the text drafted for the rider, and mark alerts handled.</li>
+    </ol>
   </header>
 
   <div class="clock">
@@ -35,7 +41,7 @@
   </div>
 
   <main>
-    <p id="load-error" class="load-error" role="alert" hidden>The shift data didn't load. Run <code>python monitor.py build</code> to write <code>docs/data.js</code>, then reload this page.</p>
+    <p id="load-error" class="load-error" role="alert" hidden>The shift didn't load. Check that <code>data.js</code> and <code>engine.js</code> sit next to this page, then reload it.</p>
 
     <div class="now">
       <section id="attention" class="panel focal" aria-labelledby="attention-title">
@@ -43,19 +49,42 @@
         <p class="note">Late trips first, then trips whose driver has gone quiet, then trips projected to miss their window.</p>
         <div class="table-scroll" role="region" aria-label="Trips that need attention" tabindex="0">
           <table>
-            <thead><tr><th scope="col">Status</th><th scope="col">Trip</th><th scope="col">Pickup window</th><th scope="col">What the check saw</th><th scope="col">Desk</th></tr></thead>
+            <thead><tr><th scope="col">Status</th><th scope="col">Trip</th><th scope="col">Pickup window</th><th scope="col">What the check saw</th><th scope="col">Alert</th></tr></thead>
             <tbody id="attention-rows"></tbody>
           </table>
         </div>
         <p id="attention-empty" class="empty" hidden>Nothing needs attention at this time. Every active trip has a recent ETA inside its window.</p>
       </section>
 
-      <section id="alerts" class="panel" aria-labelledby="alerts-title">
-        <h2 id="alerts-title">Alerts sent to desks</h2>
-        <p class="note">One alert per trip for each problem, so a desk isn't told the same thing twice. Text for riders is only a draft; nothing goes out until a dispatcher approves it.</p>
-        <ol id="alert-list" class="alert-list" tabindex="0" aria-label="Alerts, newest first"></ol>
-        <p id="alerts-empty" class="empty" hidden>No alerts yet at this time.</p>
-      </section>
+      <div class="side">
+        <section id="disrupt" class="panel" aria-labelledby="disrupt-title">
+          <h2 id="disrupt-title">Make something go wrong</h2>
+          <p class="note">The change starts at the current shift time and stays in the replay until you undo it.</p>
+          <form id="disrupt-form" class="form-grid">
+            <label for="disrupt-trip">Trip in progress<select id="disrupt-trip" required></select></label>
+            <label for="disrupt-kind">What happens<select id="disrupt-kind">
+              <option value="delay">The driver hits traffic and falls 20 minutes behind</option>
+              <option value="quiet">The driver's app stops reporting for 25 minutes</option>
+              <option value="cancel">The rider cancels the trip</option>
+            </select></label>
+            <div class="form-actions">
+              <button id="disrupt-apply" type="submit">Apply at --:--</button>
+              <button id="undo" type="button" class="secondary" disabled>Undo last change</button>
+              <button id="reset" type="button" class="secondary" disabled>Reset the demo</button>
+            </div>
+          </form>
+          <p id="disrupt-status" class="status" role="status"></p>
+          <ul id="edit-list" class="edit-list"></ul>
+        </section>
+
+        <section id="alerts" class="panel" aria-labelledby="alerts-title">
+          <h2 id="alerts-title">Alerts sent to desks</h2>
+          <p id="alerts-count" class="note"></p>
+          <p id="alerts-status" class="status" role="status"></p>
+          <ol id="alert-list" class="alert-list" tabindex="0" aria-label="Alerts, newest first"></ol>
+          <p id="alerts-empty" class="empty" hidden>No alerts yet at this time. Press Play, or make something go wrong.</p>
+        </section>
+      </div>
     </div>
 
     <section id="rules" class="panel" aria-labelledby="rules-title">
@@ -66,13 +95,28 @@
         <div><dt><span class="state late">Late</span></dt><dd>The window has closed, the driver is still reporting, and hasn't arrived.</dd></div>
         <div><dt><span class="state unknown">No recent update</span></dt><dd>Nothing from the driver for 15 minutes once the trip is under way. The check asks the desk to call instead of guessing, and never counts silence as late.</dd></div>
       </dl>
-      <p class="note">A trip counts as on time when the driver arrives inside the window, not when the rider gets in.</p>
+      <p class="note">Each trip gets at most one alert of each kind. A trip counts as on time when the driver arrives inside the window, not when the rider gets in.</p>
     </section>
 
     <section id="results" class="panel" aria-labelledby="results-title">
       <h2 id="results-title">End-of-shift results</h2>
       <div id="results-figures" class="figures"></div>
       <ul id="results-notes" class="results-notes"></ul>
+    </section>
+
+    <section id="files" class="panel" aria-labelledby="files-title">
+      <h2 id="files-title">Try your own files</h2>
+      <p class="note">Two CSV files shaped like the samples. They're read in your browser and never uploaded. Please use made-up data and keep real rider details out of a demo.</p>
+      <p class="downloads">Templates: <a id="get-trips" href="#" download="trips.csv">trips.csv</a> and <a id="get-updates" href="#" download="updates.csv">updates.csv</a> (the sample shift)</p>
+      <form id="files-form" class="form-grid">
+        <label for="trips-file">Trips<input id="trips-file" type="file" accept=".csv,text/csv" required></label>
+        <label for="updates-file">Driver updates<input id="updates-file" type="file" accept=".csv,text/csv" required></label>
+        <div class="form-actions">
+          <button type="submit">Run the check on these files</button>
+          <button id="use-sample" type="button" class="secondary" disabled>Back to the sample shift</button>
+        </div>
+      </form>
+      <p id="files-status" class="status" role="status"></p>
     </section>
 
     <section id="trips" class="panel" aria-labelledby="trips-title">
@@ -87,11 +131,11 @@
 
     <section id="rejected" class="panel" aria-labelledby="rejected-title">
       <h2 id="rejected-title">Rows the check rejected</h2>
-      <p class="note">A bad row is listed and skipped, and the rest of the file still loads. These were added to the sample on purpose.</p>
+      <p id="rejected-note" class="note">A bad row is listed and skipped, and the rest of the file still loads.</p>
       <ul id="rejected-list" class="rejected-list"></ul>
     </section>
   </main>
 
-  <footer>A reference build with made-up data. It isn't connected to a dispatch system and sends no messages. Code and sample files: <a href="https://github.com/DerpyNewb/late-trip-monitor">github.com/DerpyNewb/late-trip-monitor</a>.</footer>
+  <footer>A reference build with made-up data. It isn't connected to a dispatch system and sends no messages. Code, sample files and how it works: <a href="https://github.com/DerpyNewb/late-trip-monitor">github.com/DerpyNewb/late-trip-monitor</a>.</footer>
 </body>
 </html>
