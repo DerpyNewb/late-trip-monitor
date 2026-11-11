@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Late-trip monitor</title>
+  <meta name="description" content="Replay of a fictional medical-transport shift: driver ETAs are checked against pickup windows, and late or quiet trips are flagged to the dispatch desk that owns them.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#attention">Skip to trips that need attention</a>
+  <header class="page-header">
+    <p class="reference">Fictional shift, <span id="shift-date">10 Nov 2026</span>. Riders, drivers and zones are made up.</p>
+    <h1>Late-trip monitor</h1>
+    <p>Every 5 minutes, a check compares each driver's latest ETA with the rider's pickup window. Trips that will miss the window, have missed it, or have gone quiet go to the dispatch desk that owns them. Move the shift time to replay the day.</p>
+  </header>
+
+  <div class="clock">
+    <div class="clock-row">
+      <label for="time" class="time-label">Shift time <output id="time-out" for="time">--:--</output></label>
+      <input id="time" type="range" min="0" max="0" value="0" step="1" disabled>
+    </div>
+    <div class="clock-row actions">
+      <button id="play" type="button" aria-pressed="false" disabled>Play</button>
+      <button id="busiest" type="button" class="secondary" disabled>Busiest moment</button>
+      <button id="end" type="button" class="secondary" disabled>End of shift</button>
+      <label for="desk" class="desk">Desk
+        <select id="desk" disabled><option value="">All desks</option></select>
+      </label>
+    </div>
+    <p id="counts" class="counts">Loading the shift.</p>
+  </div>
+
+  <main>
+    <p id="load-error" class="load-error" role="alert" hidden>The shift data didn't load. Run <code>python monitor.py build</code> to write <code>docs/data.js</code>, then reload this page.</p>
+
+    <div class="now">
+      <section id="attention" class="panel focal" aria-labelledby="attention-title">
+        <h2 id="attention-title">Needs attention at <span class="at">--:--</span></h2>
+        <p class="note">Late trips first, then trips whose driver has gone quiet, then trips projected to miss their window.</p>
+        <div class="table-scroll" role="region" aria-label="Trips that need attention" tabindex="0">
+          <table>
+            <thead><tr><th scope="col">Status</th><th scope="col">Trip</th><th scope="col">Pickup window</th><th scope="col">What the check saw</th><th scope="col">Desk</th></tr></thead>
+            <tbody id="attention-rows"></tbody>
+          </table>
+        </div>
+        <p id="attention-empty" class="empty" hidden>Nothing needs attention at this time. Every active trip has a recent ETA inside its window.</p>
+      </section>
+
+      <section id="alerts" class="panel" aria-labelledby="alerts-title">
+        <h2 id="alerts-title">Alerts sent to desks</h2>
+        <p class="note">One alert per trip for each problem, so a desk isn't told the same thing twice. Text for riders is only a draft; nothing goes out until a dispatcher approves it.</p>
+        <ol id="alert-list" class="alert-list" tabindex="0" aria-label="Alerts, newest first"></ol>
+        <p id="alerts-empty" class="empty" hidden>No alerts yet at this time.</p>
+      </section>
+    </div>
+
+    <section id="rules" class="panel" aria-labelledby="rules-title">
+      <h2 id="rules-title">How the check decides</h2>
+      <dl class="rules">
+        <div><dt><span class="state on_track">On track</span></dt><dd>The driver's latest ETA falls inside the pickup window.</dd></div>
+        <div><dt><span class="state at_risk">At risk</span></dt><dd>The latest ETA is after the window closes, so the desk can act before the rider waits.</dd></div>
+        <div><dt><span class="state late">Late</span></dt><dd>The window has closed, the driver is still reporting, and hasn't arrived.</dd></div>
+        <div><dt><span class="state unknown">No recent update</span></dt><dd>Nothing from the driver for 15 minutes once the trip is under way. The check asks the desk to call instead of guessing, and never counts silence as late.</dd></div>
+      </dl>
+      <p class="note">A trip counts as on time when the driver arrives inside the window, not when the rider gets in.</p>
+    </section>
+
+    <section id="results" class="panel" aria-labelledby="results-title">
+      <h2 id="results-title">End-of-shift results</h2>
+      <div id="results-figures" class="figures"></div>
+      <ul id="results-notes" class="results-notes"></ul>
+    </section>
+
+    <section id="trips" class="panel" aria-labelledby="trips-title">
+      <h2 id="trips-title">All trips at <span class="at">--:--</span></h2>
+      <div class="table-scroll" role="region" aria-label="All trips" tabindex="0">
+        <table>
+          <thead><tr><th scope="col">Status</th><th scope="col">Trip</th><th scope="col">Pickup window</th><th scope="col">What the check saw</th><th scope="col">Driver</th><th scope="col">Desk</th><th scope="col">Ride</th></tr></thead>
+          <tbody id="trip-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="rejected" class="panel" aria-labelledby="rejected-title">
+      <h2 id="rejected-title">Rows the check rejected</h2>
+      <p class="note">A bad row is listed and skipped, and the rest of the file still loads. These were added to the sample on purpose.</p>
+      <ul id="rejected-list" class="rejected-list"></ul>
+    </section>
+  </main>
+
+  <footer>A reference build with made-up data. It isn't connected to a dispatch system and sends no messages. Code and sample files: <a href="https://github.com/DerpyNewb/late-trip-monitor">github.com/DerpyNewb/late-trip-monitor</a>.</footer>
+</body>
+</html>

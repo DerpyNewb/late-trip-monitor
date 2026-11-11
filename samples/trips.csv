@@ -1,0 +1,34 @@
+trip_id,rider_ref,purpose,mobility,zone,desk,driver_id,window_start,window_end
+T-1001,R-7116,Clinic visit,Ambulatory,Central,Central desk,D-01,2026-11-10 06:00,2026-11-10 06:30
+T-1002,R-7923,Dialysis,Ambulatory,Central,Central desk,D-02,2026-11-10 06:05,2026-11-10 06:35
+T-1003,R-7910,Dialysis,Wheelchair,South,South desk,D-03,2026-11-10 06:10,2026-11-10 06:40
+T-1004,R-7958,Dialysis,Stretcher,North,North desk,D-04,2026-11-10 06:15,2026-11-10 06:45
+T-1005,R-9138,Hospital discharge,Stretcher,South,South desk,D-05,2026-11-10 06:20,2026-11-10 06:50
+T-1006,R-3446,Clinic visit,Wheelchair,South,South desk,D-06,2026-11-10 06:25,2026-11-10 06:55
+T-1007,R-2421,Clinic visit,Ambulatory,South,South desk,D-07,2026-11-10 06:30,2026-11-10 07:00
+T-1008,R-8274,Clinic visit,Ambulatory,North,North desk,D-08,2026-11-10 06:35,2026-11-10 07:05
+T-1009,R-1105,Clinic visit,Ambulatory,South,South desk,D-01,2026-11-10 07:40,2026-11-10 08:10
+T-1010,R-2817,Dialysis,Ambulatory,North,North desk,D-02,2026-11-10 07:45,2026-11-10 08:15
+T-1011,R-7496,Clinic visit,Ambulatory,North,North desk,D-03,2026-11-10 07:50,2026-11-10 08:20
+T-1012,R-2986,Hospital discharge,Ambulatory,North,North desk,D-04,2026-11-10 07:55,2026-11-10 08:25
+T-1013,R-2127,Therapy,Ambulatory,Central,Central desk,D-05,2026-11-10 08:00,2026-11-10 08:30
+T-1014,R-1560,Dialysis,Wheelchair,South,South desk,D-06,2026-11-10 08:05,2026-11-10 08:35
+T-1015,R-6989,Therapy,Ambulatory,South,South desk,D-07,2026-11-10 08:10,2026-11-10 08:40
+T-1016,R-6032,Clinic visit,Ambulatory,North,North desk,D-08,2026-11-10 08:15,2026-11-10 08:45
+T-1017,R-2324,Clinic visit,Ambulatory,South,South desk,D-01,2026-11-10 09:20,2026-11-10 09:50
+T-1018,R-2037,Therapy,Wheelchair,South,South desk,D-02,2026-11-10 09:25,2026-11-10 09:55
+T-1019,R-4268,Dialysis,Wheelchair,North,North desk,D-03,2026-11-10 09:30,2026-11-10 10:00
+T-1020,R-6410,Dialysis,Wheelchair,North,North desk,D-04,2026-11-10 09:35,2026-11-10 10:05
+T-1021,R-3381,Dialysis,Stretcher,North,North desk,D-05,2026-11-10 09:40,2026-11-10 10:10
+T-1022,R-4879,Dialysis,Wheelchair,Central,Central desk,D-06,2026-11-10 09:45,2026-11-10 10:15
+T-1023,R-1300,Therapy,Wheelchair,North,North desk,D-07,2026-11-10 09:50,2026-11-10 10:20
+T-1024,R-1416,Therapy,Wheelchair,North,North desk,D-08,2026-11-10 09:55,2026-11-10 10:25
+T-1025,R-1670,Therapy,Ambulatory,South,South desk,D-01,2026-11-10 11:00,2026-11-10 11:30
+T-1026,R-5770,Dialysis,Wheelchair,North,North desk,D-02,2026-11-10 11:05,2026-11-10 11:35
+T-1027,R-7206,Therapy,Ambulatory,North,North desk,D-03,2026-11-10 11:10,2026-11-10 11:40
+T-1028,R-9843,Dialysis,Ambulatory,North,North desk,D-04,2026-11-10 11:15,2026-11-10 11:45
+T-1029,R-1675,Dialysis,Ambulatory,South,South desk,D-05,2026-11-10 11:20,2026-11-10 11:50
+T-1030,R-6995,Hospital discharge,Ambulatory,North,North desk,D-06,2026-11-10 11:25,2026-11-10 11:55
+T-1031,R-1010,Therapy,Ambulatory,Central,Central desk,D-07,2026-11-10 11:30,2026-11-10 12:00
+T-1032,R-9148,Clinic visit,Wheelchair,Central,Central desk,D-08,2026-11-10 11:35,2026-11-10 12:05
+T-1099,R-7116,Clinic visit,Ambulatory,Central,Central desk,D-01,2026-11-10 06:00,2026-11-10 05:00
