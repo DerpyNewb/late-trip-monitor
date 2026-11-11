@@ -31,7 +31,7 @@ The monitor reads two things a dispatch system already has: the trip schedule an
 ## How it works
 
 ```mermaid
-flowchart LR
+flowchart TD
     T["trips.csv<br/>pickup windows, desk, driver"] --> V{"Check each row"}
     U["updates.csv<br/>driver app: ETA, arrived,<br/>picked up, dropped off"] --> V
     V -- "bad row" --> R["Rejected rows,<br/>listed with line numbers"]
@@ -51,28 +51,26 @@ The alert log allows one alert per trip for each kind of problem. In the Python 
 
 ```mermaid
 stateDiagram-v2
-    direction LR
     state "Not started" as NotStarted
-    state "On track" as OnTrack
-    state "At risk" as AtRisk
+    state "Driver reporting" as Reporting {
+        state "On track" as OnTrack
+        state "At risk" as AtRisk
+        [*] --> OnTrack: ETA inside the window
+        [*] --> AtRisk: ETA after the window
+        OnTrack --> AtRisk: ETA moves past the window
+        AtRisk --> OnTrack: ETA back inside the window
+        OnTrack --> Late: window closes before arrival
+        AtRisk --> Late: window closes before arrival
+    }
     state "No recent update" as Quiet
     state "Arrived, on board or done" as Reached
     [*] --> NotStarted
-    NotStarted --> OnTrack: ETA inside the window
-    NotStarted --> AtRisk: ETA after the window
-    NotStarted --> Quiet: no update 30 minutes before the window
-    OnTrack --> AtRisk: ETA moves past the window
-    AtRisk --> OnTrack: ETA back inside the window
-    OnTrack --> Late: window closes before arrival
-    AtRisk --> Late: window closes before arrival
-    OnTrack --> Quiet: 15 minutes with no update
-    AtRisk --> Quiet: 15 minutes with no update
-    Late --> Quiet: 15 minutes with no update
-    Quiet --> OnTrack: driver reports again
-    OnTrack --> Reached
-    AtRisk --> Reached
-    Late --> Reached
-    Quiet --> Reached
+    NotStarted --> Reporting: first ETA from the driver
+    NotStarted --> Quiet: nothing 30 minutes before the window
+    Reporting --> Quiet: 15 minutes with no update
+    Quiet --> Reporting: driver reports again
+    Reporting --> Reached: driver arrives
+    Quiet --> Reached: driver arrives, or the trip closes with no arrival time
     Reached --> [*]
     classDef alert fill:#fde8ea,stroke:#a32632,color:#243447
     class AtRisk, Late, Quiet alert
