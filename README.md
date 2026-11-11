@@ -38,9 +38,8 @@ flowchart TD
     V -- "good rows" --> S["Every 5 minutes:<br/>decide each trip's state"]
     S -- "on track, arrived, done" --> N["No alert"]
     S -- "at risk, late,<br/>no recent update" --> L[("Alert log<br/>one per trip and kind")]
-    L -- "new problem only" --> D["Dispatch desk<br/>that owns the trip"]
-    D --> X["Draft text for the rider"]
-    X -- "dispatcher approves" --> Y["Text sent to the rider<br/>(not built here)"]
+    L -- "new problem only" --> D["Desk that owns the trip,<br/>with a draft text for the rider"]
+    D -- "dispatcher approves" --> Y["Text sent to the rider<br/>(not built here)"]
 ```
 
 A bad row, such as an unknown trip, a driver who isn't assigned to it, a status the check doesn't know or a missing ETA, is listed with its line number and skipped. The rest of the file still loads.
